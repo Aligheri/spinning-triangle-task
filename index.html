@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Базове завдання по WebGL - Трикутник, що обертається</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    .instructions {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 400px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    code {
+      background-color: #f0f0f0;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+<canvas id="glCanvas"></canvas>
+<div class="instructions">
+  <h2>Завдання: Трикутник, що обертається</h2>
+  <p>Це демонстрація трикутника, що обертається, з використанням WebGL. Вивчіть код і виконайте наступні завдання:</p>
+  <ol>
+    <li>Змініть колір трикутника на свій вибір</li>
+    <li>Додайте керування швидкістю обертання за допомогою клавіш (+ для прискорення, - для уповільнення)</li>
+    <li>Додайте ще одну фігуру (наприклад, квадрат) поруч із трикутником</li>
+  </ol>
+</div>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+  attribute vec4 aVertexPosition;
+  attribute vec4 aVertexColor;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  varying lowp vec4 vColor;
+
+  void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vColor = aVertexColor;
+  }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+  varying lowp vec4 vColor;
+
+  void main() {
+    gl_FragColor = vColor;
+  }
+</script>
+
+<script>
+  // Инициализация WebGL
+  let canvas;
+  let gl;
+  let programInfo;
+  let buffers;
+  let rotationSpeed = 1.0;
+  let rotationAngle = 0;
+
+  // Основная функция инициализации
+  function main() {
+    canvas = document.getElementById('glCanvas');
+    gl = canvas.getContext('webgl');
+
+    // Перевірка підтримки WebGL
+    if (!gl) {
+      alert('WebGL не підтримується вашим браузером!');
+      return;
+    }
+
+    // Установка размеров canvas
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Инициализация шейдеров
+    const shaderProgram = initShaderProgram(gl,
+      document.getElementById('vertex-shader').textContent,
+      document.getElementById('fragment-shader').textContent);
+
+    // Собираем информацию о программе шейдеров
+    programInfo = {
+      program: shaderProgram,
+      attribLocations: {
+        vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+        vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+      },
+      uniformLocations: {
+        projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+        modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+      },
+    };
+
+    // Инициализация буферов
+    buffers = initBuffers(gl);
+
+    // Обробник клавіш (завдання для виконання)
+    document.addEventListener('keydown', function(event) {
+      // Тут потрібно додати обробку клавіш '+' та '-' для керування швидкістю
+      // Підказка: використовуйте event.key і змінюйте змінну rotationSpeed
+    });
+
+    // Запуск анимации
+    requestAnimationFrame(render);
+  }
+
+  // Изменение размеров canvas
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+
+  // Инициализация шейдерной программы
+  function initShaderProgram(gl, vsSource, fsSource) {
+    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+    // Создание программы шейдеров
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    // Проверка успешности создания программы
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      alert('Не удалось инициализировать программу шейдеров: ' + gl.getProgramInfoLog(shaderProgram));
+      return null;
+    }
+
+    return shaderProgram;
+  }
+
+  // Загрузка и компиляция шейдера
+  function loadShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    // Проверка успешности компиляции
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      alert('Ошибка компиляции шейдера: ' + gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+
+    return shader;
+  }
+
+  // Инициализация буферов для треугольника
+  function initBuffers(gl) {
+    // Буфер позицій вершин для трикутника
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // Позиції вершин трикутника (x, y, z)
+    const positions = [
+      0.0,  0.5,  0.0,  // вершина
+      -0.5, -0.5,  0.0,  // лівий нижній кут
+      0.5, -0.5,  0.0,  // правий нижній кут
+    ];
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // Буфер кольорів вершин
+    const colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+
+    // Кольори для кожної вершини (r, g, b, a)
+    // ЗАВДАННЯ: змініть ці кольори!
+    const colors = [
+      1.0, 0.0, 0.0, 1.0,  // червоний
+      0.0, 1.0, 0.0, 1.0,  // зелений
+      0.0, 0.0, 1.0, 1.0,  // синій
+    ];
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+    return {
+      position: positionBuffer,
+      color: colorBuffer,
+    };
+  }
+
+  // Отрисовка сцены
+  function render(now) {
+    // Очистка canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Черный цвет фона
+    gl.clearDepth(1.0);                 // Очистка буфера глубины
+    gl.enable(gl.DEPTH_TEST);           // Включение теста глубины
+    gl.depthFunc(gl.LEQUAL);            // Ближние объекты перекрывают дальние
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Создание матрицы проекции
+    const projectionMatrix = mat4.create();
+    // Используем перспективную проекцию
+    mat4.perspective(projectionMatrix, 45 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100.0);
+
+    // Создание матрицы модели-вида
+    const modelViewMatrix = mat4.create();
+    // Передвигаем объект от камеры
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -4.0]);
+
+    // Обновляем угол вращения
+    rotationAngle += rotationSpeed * 0.01;
+    // Применяем вращение к матрице модели-вида
+    mat4.rotate(modelViewMatrix, modelViewMatrix, rotationAngle, [0, 1, 0]);
+
+    // Настройка атрибутов позиций
+    {
+      const numComponents = 3;  // xyz координаты
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+      gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexPosition,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset);
+      gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+    }
+
+    // Настройка атрибутов цветов
+    {
+      const numComponents = 4;  // rgba цвета
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+      gl.vertexAttribPointer(
+        programInfo.attribLocations.vertexColor,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset);
+      gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+    }
+
+    // Указываем программу шейдеров для использования
+    gl.useProgram(programInfo.program);
+
+    // Устанавливаем униформы шейдеров
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.projectionMatrix,
+      false,
+      projectionMatrix);
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.modelViewMatrix,
+      false,
+      modelViewMatrix);
+
+    // Отрисовка треугольника
+    {
+      const offset = 0;
+      const vertexCount = 3;
+      gl.drawArrays(gl.TRIANGLES, offset, vertexCount);
+    }
+
+    // ЗАВДАННЯ: додайте тут відрисовку другої фігури (наприклад, квадрата)
+
+    // Запрашиваем следующий кадр анимации
+    requestAnimationFrame(render);
+  }
+
+  // Простая библиотека матриц
+  const mat4 = {
+    create: function() {
+      return new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      ]);
+    },
+
+    perspective: function(out, fovy, aspect, near, far) {
+      const f = 1.0 / Math.tan(fovy / 2);
+      const nf = 1 / (near - far);
+
+      out[0] = f / aspect;
+      out[1] = 0;
+      out[2] = 0;
+      out[3] = 0;
+      out[4] = 0;
+      out[5] = f;
+      out[6] = 0;
+      out[7] = 0;
+      out[8] = 0;
+      out[9] = 0;
+      out[10] = (far + near) * nf;
+      out[11] = -1;
+      out[12] = 0;
+      out[13] = 0;
+      out[14] = (2 * far * near) * nf;
+      out[15] = 0;
+
+      return out;
+    },
+
+    translate: function(out, a, v) {
+      const x = v[0], y = v[1], z = v[2];
+
+      if (a === out) {
+        out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+        out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+        out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+        out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+      } else {
+        out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = a[3];
+        out[4] = a[4]; out[5] = a[5]; out[6] = a[6]; out[7] = a[7];
+        out[8] = a[8]; out[9] = a[9]; out[10] = a[10]; out[11] = a[11];
+        out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+        out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+        out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+        out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+      }
+
+      return out;
+    },
+
+    rotate: function(out, a, rad, axis) {
+      let x = axis[0], y = axis[1], z = axis[2];
+      let len = Math.sqrt(x * x + y * y + z * z);
+
+      if (len < 0.000001) { return null; }
+
+      len = 1 / len;
+      x *= len;
+      y *= len;
+      z *= len;
+
+      const s = Math.sin(rad);
+      const c = Math.cos(rad);
+      const t = 1 - c;
+
+      const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+      const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+      const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+
+      // Construct the rotation matrix
+      const b00 = x * x * t + c, b01 = y * x * t + z * s, b02 = z * x * t - y * s;
+      const b10 = x * y * t - z * s, b11 = y * y * t + c, b12 = z * y * t + x * s;
+      const b20 = x * z * t + y * s, b21 = y * z * t - x * s, b22 = z * z * t + c;
+
+      // Perform rotation-specific matrix multiplication
+      out[0] = a00 * b00 + a10 * b01 + a20 * b02;
+      out[1] = a01 * b00 + a11 * b01 + a21 * b02;
+      out[2] = a02 * b00 + a12 * b01 + a22 * b02;
+      out[3] = a03 * b00 + a13 * b01 + a23 * b02;
+      out[4] = a00 * b10 + a10 * b11 + a20 * b12;
+      out[5] = a01 * b10 + a11 * b11 + a21 * b12;
+      out[6] = a02 * b10 + a12 * b11 + a22 * b12;
+      out[7] = a03 * b10 + a13 * b11 + a23 * b12;
+      out[8] = a00 * b20 + a10 * b21 + a20 * b22;
+      out[9] = a01 * b20 + a11 * b21 + a21 * b22;
+      out[10] = a02 * b20 + a12 * b21 + a22 * b22;
+      out[11] = a03 * b20 + a13 * b21 + a23 * b22;
+
+      if (a !== out) {
+        out[12] = a[12];
+        out[13] = a[13];
+        out[14] = a[14];
+        out[15] = a[15];
+      }
+
+      return out;
+    }
+  };
+
+  // Запуск приложения
+  window.onload = main;
+</script>
+</body>
+</html>
+webgl-basic-task.html
+
+webgl-basic-task.html. На экране.
