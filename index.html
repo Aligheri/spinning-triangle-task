@@ -10,9 +10,11 @@
       overflow: hidden;
       font-family: Arial, sans-serif;
     }
+
     canvas {
       display: block;
     }
+
     .instructions {
       position: absolute;
       top: 10px;
@@ -22,9 +24,11 @@
       border-radius: 5px;
       max-width: 400px;
     }
+
     h2 {
       margin-top: 0;
     }
+
     code {
       background-color: #f0f0f0;
       padding: 2px 4px;
@@ -113,7 +117,12 @@
     buffers = initBuffers(gl);
 
     // Обробник клавіш (завдання для виконання)
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', function (event) {
+      if (event.key === '+') {
+        rotationSpeed += 0.1;
+      } else if (event.key === '-') {
+        rotationSpeed = Math.max(0, rotationSpeed - 0.1);
+      }
       // Тут потрібно додати обробку клавіш '+' та '-' для керування швидкістю
       // Підказка: використовуйте event.key і змінюйте змінну rotationSpeed
     });
@@ -167,41 +176,72 @@
 
   // Инициализация буферов для треугольника
   function initBuffers(gl) {
+    //Tringle
     // Буфер позицій вершин для трикутника
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    const trianglePositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, trianglePositionBuffer);
 
     // Позиції вершин трикутника (x, y, z)
-    const positions = [
-      0.0,  0.5,  0.0,  // вершина
-      -0.5, -0.5,  0.0,  // лівий нижній кут
-      0.5, -0.5,  0.0,  // правий нижній кут
+    const trianglePositions = [
+      0.0, 0.5, 0.0,  // вершина
+      -0.5, -0.5, 0.0,  // лівий нижній кут
+      0.5, -0.5, 0.0,  // правий нижній кут
     ];
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(trianglePositions), gl.STATIC_DRAW);
 
     // Буфер кольорів вершин
-    const colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    const triangleColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, triangleColorBuffer);
 
     // Кольори для кожної вершини (r, g, b, a)
     // ЗАВДАННЯ: змініть ці кольори!
-    const colors = [
-      1.0, 0.0, 0.0, 1.0,  // червоний
-      0.0, 1.0, 0.0, 1.0,  // зелений
-      0.0, 0.0, 1.0, 1.0,  // синій
+    const triangleColors = [
+      0.0, 0.2, 0.2, 1.0,  // червоний
+      0.0, 1.0, 0.3, 1.0,  // зелений
+      1.0, 0.7, 0.0, 1.0,  // синій
     ];
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleColors), gl.STATIC_DRAW);
+
+    // Square
+    const squarePositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, squarePositionBuffer);
+
+    const squarePositions = [
+      1.0, 0.25, 0.0,
+      1.5, 0.25, 0.0,
+      1.0, -0.25, 0.0,
+      1.5, -0.25, 0.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(squarePositions), gl.STATIC_DRAW);
+
+
+    const squareColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareColorBuffer);
+
+    const squareColors = [
+      1.0, 1.0, 0.0, 1.0,
+      1.0, 1.0, 0.0, 1.0,
+      1.0, 1.0, 0.0, 1.0,
+      1.0, 1.0, 0.0, 1.0
+    ]
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(squareColors), gl.STATIC_DRAW);
 
     return {
-      position: positionBuffer,
-      color: colorBuffer,
+      triangle: {
+        position: trianglePositionBuffer,
+        color: triangleColorBuffer,
+      },
+      square: {
+        position: squarePositionBuffer,
+        color: squareColorBuffer,
+      }
     };
   }
 
   // Отрисовка сцены
-  function render(now) {
+  function render() {
     // Очистка canvas
     gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Черный цвет фона
     gl.clearDepth(1.0);                 // Очистка буфера глубины
@@ -231,7 +271,7 @@
       const normalize = false;
       const stride = 0;
       const offset = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.triangle.position);
       gl.vertexAttribPointer(
         programInfo.attribLocations.vertexPosition,
         numComponents,
@@ -249,7 +289,7 @@
       const normalize = false;
       const stride = 0;
       const offset = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.triangle.color);
       gl.vertexAttribPointer(
         programInfo.attribLocations.vertexColor,
         numComponents,
@@ -281,14 +321,35 @@
     }
 
     // ЗАВДАННЯ: додайте тут відрисовку другої фігури (наприклад, квадрата)
+    const squareModelViewMatrix = mat4.create();
+    mat4.translate(squareModelViewMatrix, squareModelViewMatrix, [0.0, 0.0, -4.0]);
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.square.position);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.square.color);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.vertexColor, 4, gl.FLOAT, false, 0, 0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+
+    gl.uniformMatrix4fv(
+      programInfo.uniformLocations.modelViewMatrix,
+      false,
+      squareModelViewMatrix
+    );
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // Запрашиваем следующий кадр анимации
     requestAnimationFrame(render);
   }
 
   // Простая библиотека матриц
   const mat4 = {
-    create: function() {
+    create: function () {
       return new Float32Array([
         1, 0, 0, 0,
         0, 1, 0, 0,
@@ -297,7 +358,7 @@
       ]);
     },
 
-    perspective: function(out, fovy, aspect, near, far) {
+    perspective: function (out, fovy, aspect, near, far) {
       const f = 1.0 / Math.tan(fovy / 2);
       const nf = 1 / (near - far);
 
@@ -321,7 +382,7 @@
       return out;
     },
 
-    translate: function(out, a, v) {
+    translate: function (out, a, v) {
       const x = v[0], y = v[1], z = v[2];
 
       if (a === out) {
@@ -330,9 +391,18 @@
         out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
         out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
       } else {
-        out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = a[3];
-        out[4] = a[4]; out[5] = a[5]; out[6] = a[6]; out[7] = a[7];
-        out[8] = a[8]; out[9] = a[9]; out[10] = a[10]; out[11] = a[11];
+        out[0] = a[0];
+        out[1] = a[1];
+        out[2] = a[2];
+        out[3] = a[3];
+        out[4] = a[4];
+        out[5] = a[5];
+        out[6] = a[6];
+        out[7] = a[7];
+        out[8] = a[8];
+        out[9] = a[9];
+        out[10] = a[10];
+        out[11] = a[11];
         out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
         out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
         out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
@@ -342,11 +412,13 @@
       return out;
     },
 
-    rotate: function(out, a, rad, axis) {
+    rotate: function (out, a, rad, axis) {
       let x = axis[0], y = axis[1], z = axis[2];
       let len = Math.sqrt(x * x + y * y + z * z);
 
-      if (len < 0.000001) { return null; }
+      if (len < 0.000001) {
+        return null;
+      }
 
       len = 1 / len;
       x *= len;
